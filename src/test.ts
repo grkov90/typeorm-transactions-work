@@ -30,7 +30,7 @@ const connectionConfig: ConnectionOptions = {
     entities: [UserEntity],
 
     // Can view typeorm logs if set true.
-    logging: false,
+    logging: true,
 
     // Drop when connect.
     dropSchema: true,
@@ -167,5 +167,31 @@ describe('Insert rows to db', () => {
         await connection.transaction(async (manager) => {
             await manager.save(rows);
         })
+    })
+
+    /**
+     *  START TRANSACTION;
+     *  INSERT INTO ... VALUES (...);
+     *  INSERT INTO ... VALUES (...);
+     *  INSERT INTO ... VALUES (...);
+     *  COMMIT;
+     */
+    it('(8) queryRunner.manager.save(rows) manual transaction', async () => {
+        const queryRunner = connection.createQueryRunner();
+
+        await queryRunner.connect();
+
+        await queryRunner.startTransaction();
+
+        try {
+
+            await queryRunner.manager.save(rows);
+            await queryRunner.commitTransaction();
+
+        } catch (err) {
+            await queryRunner.rollbackTransaction();
+        } finally {
+            await queryRunner.release();
+        }
     })
 })
